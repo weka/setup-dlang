@@ -12,6 +12,9 @@ inputs:
     description: "Token to use when doing Github API request (for ldc-master)"
     default: ${{ github.token }}
     required: false
+  gdmd_sha:
+    description: "Commit sha in https://github.com/D-Programming-GDC/gdmd, used only by the gdmd compiler"
+    required: false
 runs:
   using: "node20"
   main: "dist/index.js"

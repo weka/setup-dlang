@@ -69,6 +69,10 @@ jobs:
           - os: macOS-latest
             arch: arm64
             dc: ldc-master
+          - os: ubuntu-latest
+            dc: gdmd-12
+          - os: ubuntu-latest
+            dc: gdmd
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -85,15 +89,17 @@ jobs:
         run: $DC .github/hello.d && ./hello
 
       - name: Verify D compiler with explicit bitness ($DC)
-        if: ${{ env['DC'] == 'dmd' }}
+        if: ${{ startsWith(matrix.dc, 'dmd') }}
         shell: bash
         run: $DC -m64 .github/hello.d && ./hello
 
       - name: Verify D compiler ($DC, shared)
+        if: ${{ !startsWith(matrix.dc, 'g') }} # fails with gdc
         shell: bash
         run: $DC -shared .github/hello.d && ./hello
 
       - name: Verify D compiler (dub)
+        if: ${{ !startsWith(matrix.dc, 'g') }} # dub doesn't come with gdc by default
         run: dub run --single -q .github/hello.d
 
       - name: Install Node.js 20.x
@@ -118,11 +124,16 @@ jobs:
       fail-fast: false
       matrix:
         os:  [ ubuntu-latest, windows-latest, macOS-13 ]
-        dc:  [ ldc-latest, dmd-latest ]
-        dub: [ 1.19.0, 1.23.0, 1.24.0 ]
+        dc:  [ ldc-latest, dmd-latest, gdc, gdmd-12 ]
+        dub: [ 1.19.0, 1.23.0, latest ]
         exclude:
           # Excluded because those are actually Linux executables
           - { os: windows-latest, dub: 1.19.0 }
+          # gdc only supports linux
+          - { os: windows-latest, dc: gdc }
+          - { os: windows-latest, dc: gdmd-12 }
+          - { os: macOS-13, dc: gdc }
+          - { os: macOS-13, dc: gdmd-12 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -131,13 +142,14 @@ jobs:
         with:
           compiler: ${{ matrix.dc }}
           dub: ${{ matrix.dub }}
+          gdmd_sha: 'dc0ad9f739795f3ce5c69825efcd5d1d586bb013'
 
       - name: Verify DUB version
         shell: bash
         run: |
           if [[ ${{ matrix.dub }} == 'latest' ]]
           then
-              DUB_VERSION_FOR_TEST=$(curl -s https://api.github.com/repos/dlang/dub/releases/latest | jq -r '.name | sub("v(?<v>.+)"; .v)')
+              DUB_VERSION_FOR_TEST=$(curl -s https://api.github.com/repos/dlang/dub/releases/latest | jq -r '.tag_name | sub("v(?<v>.+)"; .v)')
           else
               DUB_VERSION_FOR_TEST=${{ matrix.dub }}
           fi
@@ -152,3 +164,8 @@ jobs:
           else
              exit 1
           fi
+
+      - name : Compile with dub
+        shell: bash
+        run: |
+          cd .github && dub run --single hello.d --compiler=${DC}

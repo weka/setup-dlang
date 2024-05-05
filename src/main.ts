@@ -18,11 +18,17 @@ async function run() {
             throw new Error("The dmd compiler is not supported for non-x64 architecture");
         const gh_token = core.getInput('gh_token') || "";
         const dub_version = core.getInput('dub') || "";
+	const gdmd_sha = core.getInput('gdmd_sha') || ""
+
 	let compiler: d.ITool
 	if (input.startsWith('dmd'))
 	    compiler = await d.DMD.initialize(input, gh_token)
 	else if (input.startsWith('ldc'))
 	    compiler = await d.LDC.initialize(input, gh_token)
+	else if (input.startsWith('gdc'))
+	    compiler = await d.GDC.initialize(input)
+	else if (input.startsWith('gdmd'))
+	    compiler = await d.GDMD.initialize(input, gdmd_sha)
 	else
 	    throw new Error(`Unrecognized compiler: '${input}'`)
 

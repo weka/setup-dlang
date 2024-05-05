@@ -2,7 +2,7 @@ import * as tc from '@actions/tool-cache'
 import * as core from '@actions/core'
 import * as gpg from './gpg'
 import * as utils from './utils'
-import { existsSync } from 'fs';
+import * as fs from 'fs';
 import * as semver from './semver'
 import * as exec from '@actions/exec'
 
@@ -67,7 +67,7 @@ export class Compiler implements ITool {
     addLibPaths(root: string) {
 	this.libPaths.forEach(function(libPath) {
 	    let path = root + libPath
-	    if (existsSync(path)) {
+	    if (fs.existsSync(path)) {
 		console.log(`Adding '${path}' to library path`)
 
 		if (process.platform == "win32") {
@@ -723,5 +723,132 @@ export class Dub implements ITool {
 	let dubDir = await this.getCached()
 	console.log(`Adding dub directory '${dubDir}' to path`)
 	core.addPath(dubDir)
+    }
+}
+
+export class GDC implements ITool {
+    /** The name of the apt package that will install gdc */
+    private aptPkgName: string
+
+    constructor(aptPkgName: string) {
+	this.aptPkgName = aptPkgName
+    }
+
+    /** Parse a user provided version string and convert it to a gdc class
+
+	Common values for versionString are: gdc, gdc-12 or
+	gdc-11.
+
+	Note that the implementation only supports linux (and only
+	through apt).
+     */
+    static async initialize(versionString: string): Promise<GDC> {
+	if (process.platform != 'linux')
+	    throw new Error(`Gdc is currently only supported on linux, not ${process.platform}`)
+
+	let match = versionString.match(/^gdc(-\d+)?$/)
+	if (match === null)
+	    throw new Error(`Unrecognized gdc format '${versionString}`)
+
+	return new GDC(versionString)
+    }
+
+    async makeAvailable() {
+	console.log(`Installing ${this.aptPkgName}`)
+	await exec.exec('sudo apt-get update')
+	await exec.exec('sudo', ['apt-get', 'install', '-y', this.aptPkgName])
+	console.log(`Setting DC to '/usr/bin/${this.aptPkgName}'`)
+	core.exportVariable('DC', `/usr/bin/${this.aptPkgName}`)
+    }
+}
+
+export class GDMD implements ITool {
+    /** a gdc instance that this class wraps */
+    private gdc: GDC
+    /** The target binary name for the gdmd script
+
+	Example: /usr/bin/gdmd-12
+    */
+    private targetBinName: string
+    /** A commit sha in https://github.com/D-Programming-GDC/gdmd.
+
+	It can be used instead of the gdmd script that is packaged in
+	ubuntu. If it is empty it means that the packaged version is
+	preferred.
+    */
+    private gitCommitSha: string
+
+    constructor(gdc: GDC, targetBinName: string, gitCommitSha: string) {
+	this.gdc = gdc
+	this.targetBinName = targetBinName
+	this.gitCommitSha = gitCommitSha
+    }
+
+    /** Initialize a GDMD class from a user provided version string.
+
+	The format of the versionString is the same as for the GDC
+	class except that the name starts with gdmd instead of gdc.
+
+	@param gitCommitSha - a commit sha in
+	https://github.com/D-Programming-GDC/gdmd. If not empty the
+	git version of gdmd is preferred over the one in the ubuntu
+	repositories.
+    */
+    static async initialize(versionString: string, gitCommitSha: string)
+    : Promise<GDMD> {
+	if (!versionString.startsWith('gdmd'))
+	    throw new Error(`gdmd version doesn't start with gdmd: '${versionString}'`)
+	let gdcString = 'gdc' + versionString.slice('gdmd'.length)
+	let gdc = await GDC.initialize(gdcString)
+
+	return new GDMD(gdc, `/usr/bin/${versionString}`, gitCommitSha)
+    }
+
+    async makeAvailable() {
+	await this.gdc.makeAvailable()
+
+	if (this.gitCommitSha)
+	    await this.makeAvailableFromHash()
+	else
+	    await this.makeAvailableFromApt()
+	await this.makeExecutable()
+	console.log(`Setting DC to '${this.targetBinName}'`)
+	core.exportVariable('DC', this.targetBinName)
+    }
+
+    /** Make the gdmd program executable */
+    private async makeExecutable() {
+	await exec.exec('sudo', ['chmod', '+x', this.targetBinName])
+    }
+
+    /** Install gdmd using apt.
+
+	This is not entirely sufficient as the script has to be
+	renamed to match this.targetBinName, otherwise it will use the
+	wrong version of gdc.
+     */
+    private async makeAvailableFromApt() {
+	await exec.exec('sudo apt-get install -y gdmd')
+	if (this.targetBinName != '/usr/bin/gdmd') {
+	    console.log(`Copying gdmd script to ${this.targetBinName}`)
+	    await exec.exec('sudo', ['cp', '/usr/bin/gdmd', this.targetBinName])
+	}
+    }
+
+    /** Install gdmd from a hash in the D-Programming-GDC/gdmd repo */
+    private async makeAvailableFromHash() {
+	if (!this.gitCommitSha)
+	    throw new Error("Internal error, no git commit sha for gdmd")
+	const sha = this.gitCommitSha
+
+	let cached = tc.find('gdmd', sha)
+	if (!cached) {
+	    const url = `https://raw.githubusercontent.com/D-Programming-GDC/gdmd/${sha}/dmd-script`
+	    const path = await tc.downloadTool(url)
+	    cached = await tc.cacheFile(path, 'gdmd', 'gdmd', sha)
+	}
+
+	console.log(`Copying gdmd script to ${this.targetBinName}`)
+	await exec.exec('sudo', ['cp', cached + '/gdmd', this.targetBinName])
     }
 }
