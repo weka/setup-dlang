@@ -14,17 +14,27 @@ jobs:
       max-parallel: 5
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest, macOS-13]
         dc:
           [
+            ldc,
             ldc-1.19.0,
+            ldc-1.37.0-beta1,
+            ldc-1.36,
+            ldc-1.38b,
             ldc-latest,
             ldc-beta,
+            ldc^3,
             ldc-master,
             # Need fix for https://issues.dlang.org/show_bug.cgi?id=22942 for macOS
+            dmd,
             dmd-2.099.1,
+            dmd-2.108.1-rc.1,
+            dmd-2.106,
+            dmd-2.106b,
             dmd-latest,
             dmd-beta,
+            dmd^3,
             dmd-master,
             "",
           ]
@@ -32,15 +42,30 @@ jobs:
           - os: macOS-latest
             arch: arm64
             dc: ""
+          - os: macOS-latest
+            arch: arm64
+            dc: ldc
           - os: macos-latest
             arch: arm64
             dc: ldc-1.30.0
+          - os: macos-latest
+            arch: arm64
+            dc: ldc-1.28 # Something before ldc2-1.30.0-beta1
+          - os: macos-latest
+            arch: arm64
+            dc: ldc-1.35.0-beta1
+          - os: macos-latest
+            arch: arm64
+            dc: ldc-1.33b
           - os: macOS-latest
             arch: arm64
             dc: ldc-latest
           - os: macOS-latest
             arch: arm64
             dc: ldc-beta
+          - os: macos-latest
+            arch: arm64
+            dc: ldc^2
           - os: macOS-latest
             arch: arm64
             dc: ldc-master
@@ -92,7 +117,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:  [ ubuntu-latest, windows-latest, macOS-latest ]
+        os:  [ ubuntu-latest, windows-latest, macOS-13 ]
         dc:  [ ldc-latest, dmd-latest ]
         dub: [ 1.19.0, 1.23.0, 1.24.0 ]
         exclude:

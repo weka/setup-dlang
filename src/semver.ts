@@ -1,4 +1,4 @@
-type SemVer = [number, number, number, (string | number)[]];
+export type SemVer = [number, number, number, (string | number)[]];
 
 export function parseSimpleSemver(a: string): SemVer {
     if (a.startsWith("v")) a = a.substring(1);
