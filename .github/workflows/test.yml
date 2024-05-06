@@ -8,25 +8,13 @@ on:
     - "*"
 
 jobs:
-  verify:
-    name: Verify install
+  verify-dmd:
     strategy:
       max-parallel: 5
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-13]
-        dc:
-          [
-            ldc,
-            ldc-1.19.0,
-            ldc-1.37.0-beta1,
-            ldc-1.36,
-            ldc-1.38b,
-            ldc-latest,
-            ldc-beta,
-            ldc^3,
-            ldc-master,
-            # Need fix for https://issues.dlang.org/show_bug.cgi?id=22942 for macOS
+        os: [ ubuntu-latest, windows-latest ]
+        dc: [
             dmd,
             dmd-2.099.1,
             dmd-2.108.1-rc.1,
@@ -36,87 +24,74 @@ jobs:
             dmd-beta,
             dmd^3,
             dmd-master,
-            "",
-          ]
+        ]
         include:
-          - os: macOS-latest
-            arch: arm64
-            dc: ""
-          - os: macOS-latest
-            arch: arm64
-            dc: ldc
-          - os: macos-latest
-            arch: arm64
-            dc: ldc-1.30.0
-          - os: macos-latest
-            arch: arm64
-            dc: ldc-1.28 # Something before ldc2-1.30.0-beta1
-          - os: macos-latest
-            arch: arm64
-            dc: ldc-1.35.0-beta1
-          - os: macos-latest
-            arch: arm64
-            dc: ldc-1.33b
-          - os: macOS-latest
-            arch: arm64
-            dc: ldc-latest
-          - os: macOS-latest
-            arch: arm64
-            dc: ldc-beta
-          - os: macos-latest
-            arch: arm64
-            dc: ldc^2
-          - os: macOS-latest
-            arch: arm64
-            dc: ldc-master
-          - os: ubuntu-latest
-            dc: gdmd-12
-          - os: ubuntu-latest
-            dc: gdmd
-
+          # macOS-latest is arm64, not supported by dmd
+          # Needs >=dmd-2.107.1 due to https://issues.dlang.org/show_bug.cgi?id=24137
+          - { os: macOS-13, dc: dmd-2.108.1-rc.1 }
+          - { os: macOS-13, dc: dmd-2.107 }
+          - { os: macOS-13, dc: dmd-latest }
+          - { os: macOS-13, dc: dmd-master }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install D compiler
-        uses: ./
+      - uses: ./.github/actions/verify-d-compiler
         with:
-          compiler: ${{ matrix.dc }}
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
+          dc: ${{ matrix.dc }}
 
-      - name: Verify D compiler ($DC)
-        shell: bash
-        run: $DC .github/hello.d && ./hello
-
-      - name: Verify D compiler with explicit bitness ($DC)
-        if: ${{ startsWith(matrix.dc, 'dmd') }}
-        shell: bash
-        run: $DC -m64 .github/hello.d && ./hello
-
-      - name: Verify D compiler ($DC, shared)
-        if: ${{ !startsWith(matrix.dc, 'g') }} # fails with gdc
-        shell: bash
-        run: $DC -shared .github/hello.d && ./hello
-
-      - name: Verify D compiler (dub)
-        if: ${{ !startsWith(matrix.dc, 'g') }} # dub doesn't come with gdc by default
-        run: dub run --single -q .github/hello.d
-
-      - name: Install Node.js 20.x
-        uses: actions/setup-node@v4
+  verify-ldc:
+    strategy:
+      max-parallel: 5
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macOS-latest, macOS-13 ]
+        dc: [
+            ldc,
+            ldc-1.19.0,
+            ldc-1.37.0-beta1,
+            ldc-1.36,
+            ldc-1.38b,
+            ldc-latest,
+            ldc-beta,
+            ldc^3,
+            ldc-master,
+        ]
+        exclude:
+          # arm64 binaries are available since ldc-1.25.0
+          - { os: macOS-latest, dc: ldc-1.19.0 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/verify-d-compiler
         with:
-          node-version: 20
+          dc: ${{ matrix.dc }}
 
-      - name: Ensure `dist/index.js` is up to date
-        env:
-           NODE_OPTIONS: "--openssl-legacy-provider"
-        run: |
-          set -euxo pipefail
-          npm ci
-          npm run build
-          # exclude dist/index.js.map (different on Windows)
-          git diff --stat --exit-code HEAD -- ':!dist/index.js.map'
-        shell: bash
+  verify-gdmd:
+    strategy:
+      max-parallel: 5
+      fail-fast: false
+      matrix:
+        # gdc and gdmd are only supported on ubuntu
+        os: [ ubuntu-latest ]
+        dc: [ gdmd, gdmd-12 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/verify-d-compiler
+        with:
+          dc: ${{ matrix.dc }}
+
+  verify-default:
+    name: Verify default compiler
+    strategy:
+      max-parallel: 5
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macOS-latest, macOS-13 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/verify-d-compiler
 
   dub:
     name: Verify standalone DUB install
@@ -129,7 +104,7 @@ jobs:
         exclude:
           # Excluded because those are actually Linux executables
           - { os: windows-latest, dub: 1.19.0 }
-          # gdc only supports linux
+          # gdc only supports Linux
           - { os: windows-latest, dc: gdc }
           - { os: windows-latest, dc: gdmd-12 }
           - { os: macOS-13, dc: gdc }
