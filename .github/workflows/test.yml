@@ -6,6 +6,9 @@ on:
   pull_request:
     branches:
     - "*"
+defaults:
+  run:
+    shell: bash
 
 jobs:
   verify-dmd:
@@ -120,7 +123,6 @@ jobs:
           gdmd_sha: 'dc0ad9f739795f3ce5c69825efcd5d1d586bb013'
 
       - name: Verify DUB version
-        shell: bash
         run: |
           if [[ ${{ matrix.dub }} == 'latest' ]]
           then
@@ -141,6 +143,5 @@ jobs:
           fi
 
       - name : Compile with dub
-        shell: bash
         run: |
           cd .github && dub run --single hello.d --compiler=${DC}
