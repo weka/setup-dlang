@@ -145,3 +145,21 @@ jobs:
       - name : Compile with dub
         run: |
           cd .github && dub run --single hello.d --compiler=${DC}
+
+  verify-index-js-up-to-date:
+    name: Verify that `dist/index.js` is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: diff-ing dist/index.js
+        env:
+            NODE_OPTIONS: "--openssl-legacy-provider"
+        run: |
+          set -euxo pipefail
+          npm ci
+          npm run build
+          # exclude dist/index.js.map (different on Windows)
+          git diff --stat --exit-code HEAD -- ':!dist/index.js.map'

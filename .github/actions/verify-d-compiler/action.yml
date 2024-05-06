@@ -36,19 +36,3 @@ runs:
       if: ${{ !startsWith(inputs.dc, 'g') }} # dub doesn't come with gdc by default
       shell: bash
       run: dub run --single -q .github/hello.d
-
-    - name: Install Node.js 20.x
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-
-    - name: Ensure `dist/index.js` is up to date
-      env:
-          NODE_OPTIONS: "--openssl-legacy-provider"
-      run: |
-        set -euxo pipefail
-        npm ci
-        npm run build
-        # exclude dist/index.js.map (different on Windows)
-        git diff --stat --exit-code HEAD -- ':!dist/index.js.map'
-      shell: bash
