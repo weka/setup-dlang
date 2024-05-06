@@ -149,7 +149,12 @@ jobs:
         run: |
           if [[ ${{ matrix.dub }} == 'latest' ]]
           then
-              DUB_VERSION_FOR_TEST=$(curl -s https://api.github.com/repos/dlang/dub/releases/latest | jq -r '.tag_name | sub("v(?<v>.+)"; .v)')
+              curlCmd=(
+                  curl -s
+                  --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}"
+                  https://api.github.com/repos/dlang/dub/releases/latest
+              )
+              DUB_VERSION_FOR_TEST=$("${curlCmd[@]}" | jq -r '.tag_name | sub("v(?<v>.+)"; .v)')
           else
               DUB_VERSION_FOR_TEST=${{ matrix.dub }}
           fi
