@@ -9,7 +9,7 @@ Basic usage:
 ```yml
 steps:
   - uses: actions/checkout@v4
-  - uses: dlang-community/setup-dlang@v1
+  - uses: dlang-community/setup-dlang@v2
     with:
       compiler: dmd
   - name: Run tests
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install D compiler
-        uses: dlang-community/setup-dlang@v1
+        uses: dlang-community/setup-dlang@v2
         with:
           compiler: ${{ matrix.dc }}
 
@@ -72,7 +72,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install D compiler
-        uses: dlang-community/setup-dlang@v1
+        uses: dlang-community/setup-dlang@v2
         with:
           compiler: ${{ matrix.dc }}
           # dub doesn't come with gdc.
@@ -91,14 +91,14 @@ Simply add the setup-dlang action to your GitHub Actions workflow to automatical
 
 Examples:
 ```yml
-- uses: dlang-community/setup-dlang@v1
+- uses: dlang-community/setup-dlang@v2
   with:
     compiler: dmd^3
     dub: 1.37.0
 ```
 
 ```yml
-- uses: dlang-community/setup-dlang@v1
+- uses: dlang-community/setup-dlang@v2
   with:
     compiler: gdmd-12
     # dub doesn't come with gdc
@@ -202,12 +202,12 @@ Note that gdc won't come by default with any extra programs like `rdmd` or `dub`
 You can do that with:
 
 ```yml
-- uses: dlang-community/setup-dlang@v1
+- uses: dlang-community/setup-dlang@v2
   name: Install dub and tools
   with:
     compiler: dmd
 
-- uses: dlang-community/setup-dlang@v1
+- uses: dlang-community/setup-dlang@v2
   name: Install D compiler
   with:
     compiler: gdc-12
