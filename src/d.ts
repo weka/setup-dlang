@@ -7,6 +7,7 @@ import * as semver from './semver'
 import * as exec from '@actions/exec'
 
 const sep = (process.platform == 'win32' ? '\\' : '/')
+const exeExt = (process.platform == 'win32' ? '.exe' : '')
 
 /** Base interface for all D tools */
 export interface ITool {
@@ -107,7 +108,7 @@ export class Compiler implements ITool {
 
     /** Set the DC environment variable to point to the newly extracted compiler */
     setDC(root: string) {
-	core.exportVariable("DC", root + this.binPath + sep + this.name)
+	core.exportVariable("DC", root + this.binPath + sep + this.name + exeExt)
     }
 
     /** Take all the necessary steps to make the compiler available on the host
@@ -655,7 +656,7 @@ export class LDC extends Compiler {
 
 export class Dub implements ITool {
     private readonly name = 'dub'
-    private readonly exeName = this.name + (process.platform == 'win32' ? '.exe' : '')
+    private readonly exeName = this.name + exeExt
     constructor(private url: string, private version: string) {}
 
     /** Parse a version string and compute the associated version
