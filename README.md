@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: dub -q test
 ```
-The above example test 11 possible combinations: the latest `dmd` and latest `ldc` on all three platforms,
+The above example tests 11 possible combinations: the latest `dmd` and latest `ldc` on all three platforms,
 `ldc-1.17.0` on all three platforms, and `dmd-2.085.0` on `ubuntu-latest` and `windows-latest`.
 
 Gdc usage:
@@ -85,7 +85,9 @@ jobs:
 ```
 
 
-Simply add the setup-dlang action to your GitHub Actions workflow to automatically download and install a D compiler and package manager bundled with the compiler or separately downloaded. The action will automatically add the D binaries to the `PATH` environment variable and set the `DC` environment variable to the selected compiler executable name.
+Simply add the setup-dlang action to your GitHub Actions workflow to automatically download and install a D compiler and package manager bundled with the compiler or separately downloaded. The action will automatically add the D binaries to the `PATH` environment variable and set the `DC` environment variable to the selected compiler.
+Note, this behavior has been slightly adjusted in v2.
+For more details check the changes below.
 
 ## Input to this action
 
@@ -224,3 +226,16 @@ If the `dub` parameter is provided to the action, that version will be the one i
 Note that DUB versions prior to v1.13.0 (DMD version v2.084.0, released 2019-01-02) do not support HTTP2,
 meaning they will not work for fetching packages.
 Additionally, some tags of dub (`v1.29.1` - `v1.36.0`) don't have releases so you won't be able to install them (https://github.com/dlang-community/setup-dlang/issues/64)
+
+## Changes from v1
+
+The most important change is the `$DC` environment variable becoming an absolute path instead of only the filename.
+Depending on how it is used in scripts care must be taken to properly quote it especially on windows to avoid the `\` character being lost.
+
+DMD versions prior to `dmd-2.072` will no longer install dub automatically.
+If you need dub with these versions just specify it as an argument to the action.
+
+When specifying `dmd-beta` the action may install `dmd-latest` if it determines that it has a more recent version.
+Example, if the latest DMD beta is `2.098.1_rc1` and the latest DMD release is `2.099.0` then `dmd-beta` will now resolve to `2.099.0` instead of `2.098.1_rc1`.
+
+The minimum available version of dmd has been raised to `2.065.0`.
