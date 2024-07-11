@@ -182,8 +182,6 @@ export class DMD extends Compiler {
        All of the formats /except/ dmd-master come with a signature file.
      */
     static async initialize(versionString: string, token: string): Promise<DMD> {
-	if (process.arch != 'x64')
-	    throw new Error(`dmd can only be used on x86_64, not on '${process.arch}'`)
 	if (versionString == 'dmd-master') {
 	    return await DMD.initializeFromMaster(token)
 	}

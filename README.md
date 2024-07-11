@@ -189,7 +189,6 @@ The default value for this input is `latest` and it is required when using GDC.
 ### DMD
 
 All DMD versions of releases and pre-releases since 2.065.0 on https://downloads.dlang.org/releases/2.x/ and https://downloads.dlang.org/pre-releases/2.x/ are supported.
-Be aware that with the `macos-latest` (that currently resolve to `macos-14`) runners, the cpu architecture is arm64 and because of this dmd doesn't work on them.
 
 DMD releases come with some extra tools like `rdmd` and `dub`. You are free to use them at your leisure.
 
@@ -253,3 +252,6 @@ Now it is downloaded and setup unconditionally.
 Introduces the `DMD` variable which will point to the dmd wrapper of the selected compiler.
 For example if you install `ldc-1.37.0` then `DC` will point to `<extracted_path>/ldc2` and `DMD` will point to `<extracted_path>/ldmd2`
 This variable is setup for all compilers, automatically.
+
+`dmd` is now allowed on `macos-latest` (arm64).
+It should work even if it's a x86_64 binary thanks to the Rosetta compatibility layer.

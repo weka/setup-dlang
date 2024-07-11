@@ -425,9 +425,11 @@ test('dmd gracefully handles invalid versions', async () => {
 	await expect(init(unexpected)).rejects.toThrow('dmd')
 })
 
-test('dmd fails on non-x64', async () => {
+// https://github.com/dlang-community/setup-dlang/issues/78
+test("dmd doesn't fail on arm64 macos #78", async () => {
     Object.defineProperty(process, 'arch', { value: 'arm64' })
-    expect(init('dmd-2.109.0')).rejects.toThrow(process.arch)
+    Object.defineProperty(process, 'platform', { value: 'darwin' })
+    expect(init('dmd-2.109.0')).resolves.toHaveProperty('version', '2.109.0')
 })
 
 test('dmd fails on unsupported platforms', async () => {

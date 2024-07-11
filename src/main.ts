@@ -13,8 +13,6 @@ export function getActionInputs() {
         default_compiler = "ldc-latest";
     }
     const d_compiler = core.getInput('compiler') || default_compiler;
-    if (process.arch != "x64" && d_compiler.startsWith("dmd"))
-        throw new Error("The dmd compiler is not supported for non-x64 architecture");
     const gh_token = core.getInput('gh_token') || "";
     const dub_version = core.getInput('dub') || "";
     const gdmd_sha = core.getInput('gdmd_sha') || ""

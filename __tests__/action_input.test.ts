@@ -3,6 +3,7 @@ import * as core from '@actions/core'
 import * as d from '../src/d'
 import * as testUtils from './test-helpers.test'
 testUtils.saveProcessRestorePoint()
+testUtils.disableNetwork()
 
 describe('Testing compiler when...', function(){
     beforeAll(() => jest.spyOn(core, 'getInput').mockReturnValue(''))
@@ -37,10 +38,11 @@ describe('Testing compiler when...', function(){
 	    d_compiler: 'invalid text', gh_token: '', dub_version: '', gdmd_sha: '',})
     })
 
-    test('it is dmd on arm64', () => {
+    // https://github.com/dlang-community/setup-dlang/issues/78
+    test('it is dmd on arm64 issue#78', () => {
 	Object.defineProperty(process, 'arch', { value: 'arm64' })
 	mockCompiler('dmd-beta')
-	expect(main.getActionInputs).toThrow('dmd')
+	expect(main.getActionInputs()).toHaveProperty('d_compiler', 'dmd-beta')
     })
 });
 
