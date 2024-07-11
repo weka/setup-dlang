@@ -19,13 +19,13 @@ export interface ITool {
 */
 export class Compiler implements ITool {
     /** The url to the compiler's release archive */
-    protected url: string
+    public url: string
     /** An optional signature used to verify the archive */
-    protected sig?: string
+    public sig?: string
     /** The compiler's name, used for caching */
-    protected name: string
+    public name: string
     /** The compiler's version, used for caching */
-    protected version: string
+    public version: string
     /** The sub-folder of the archive in which the compiler binary + tools reside
 
 	The path should start with the system path separator and be
@@ -33,13 +33,13 @@ export class Compiler implements ITool {
 
 	@example "/dmd2/linux/bin64"
      */
-    protected binPath: string
+    public binPath: string
     /** A list of sub-folders in the archive that contains the compiler's libraries
 
 	The paths should start with the system path separator (/ or
 	\\) and be relative to the archive root.
     */
-    protected libPaths: string[]
+    public libPaths: string[]
 
 
     constructor(url: string,
@@ -655,9 +655,9 @@ export class LDC extends Compiler {
 }
 
 export class Dub implements ITool {
-    private readonly name = 'dub'
-    private readonly exeName = this.name + exeExt
-    constructor(private url: string, private version: string) {}
+    public readonly name = 'dub'
+    public readonly exeName = this.name + exeExt
+    constructor(public url: string, public version: string) {}
 
     /** Parse a version string and compute the associated version
 
