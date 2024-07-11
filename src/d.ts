@@ -174,6 +174,8 @@ export class DMD extends Compiler {
        All of the formats /except/ dmd-master come with a signature file.
      */
     static async initialize(versionString: string, token: string): Promise<DMD> {
+	if (process.arch != 'x64')
+	    throw new Error(`dmd can only be used on x86_64, not on '${process.arch}'`)
 	if (versionString == 'dmd-master') {
 	    return await DMD.initializeFromMaster(token)
 	}
@@ -520,7 +522,7 @@ export class LDC extends Compiler {
 		    case "x64": arch = "x86_64"; break;
 		    case "arm": arch = "armhf"; break; // supported on old LDC releases
 		    case "arm64": arch = "aarch64"; break;
-		    default: throw new Error(`Unknown architecture ${arch} for ldc on linux`)
+		    default: throw new Error(`Unknown architecture ${process.arch} for ldc on linux`)
 		}
 		return `linux-${arch}.tar.xz`
 	    case "darwin":
@@ -530,7 +532,7 @@ export class LDC extends Compiler {
 		    case "x64": arch = "x86_64"; break;
 		    case "arm":
 		    case "arm64": arch = "arm64"; break;
-		    default: throw new Error(`Unknown architecture ${arch} for ldc on osx`)
+		    default: throw new Error(`Unknown architecture ${process.arch} for ldc on osx`)
 		}
 		arch = legacyOsx ? arch : 'universal'
 		return `osx-${arch}.tar.xz`
@@ -755,7 +757,7 @@ export class GDC implements ITool {
 
 	let match = versionString.match(/^gdc(-\d+)?$/)
 	if (match === null)
-	    throw new Error(`Unrecognized gdc format '${versionString}`)
+	    throw new Error(`Unrecognized gdc format '${versionString}'`)
 
 	return new GDC(versionString)
     }
