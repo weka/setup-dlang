@@ -22,10 +22,3 @@ export async function verify(file_path: string, sig_url: string) {
           sig_path, file_path ]
     )
 }
-
-export async function install() {
-    // other platforms have gpg pre-installed
-    if (process.platform == "darwin") {
-	await exec.exec('brew', [ 'install', 'gnupg' ])
-    }
-}

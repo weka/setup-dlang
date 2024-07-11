@@ -103,7 +103,6 @@ export class Compiler implements ITool {
             const archive = await tc.downloadTool(this.url);
             if (this.sig) {
                 console.log("Verifying the download with GPG");
-                await gpg.install();
                 await gpg.verify(archive, this.sig);
             }
             let path = await utils.extract(this.url, archive);
