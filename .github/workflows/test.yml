@@ -89,21 +89,21 @@ jobs:
         with:
           dc: ${{ matrix.dc }}
 
-  verify-gdmd:
+  verify-gdc:
     needs: verify-index-js-up-to-date
     strategy:
       max-parallel: 5
       fail-fast: false
       matrix:
-        # gdc and gdmd are only supported on ubuntu
-        os: [ ubuntu-latest ]
-        dc: [ gdmd, gdmd-12 ]
-    runs-on: ${{ matrix.os }}
+        dc: [ gdc, gdc-12 ]
+        gdmd_sha: [ latest, 27c4c660f30d03e6cf467781bbbd3bbcc3db5758 ]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/verify-d-compiler
         with:
           dc: ${{ matrix.dc }}
+          gdmd_sha: ${{ matrix.gdmd_sha }}
 
   verify-default:
     needs: verify-index-js-up-to-date
@@ -125,16 +125,16 @@ jobs:
       fail-fast: false
       matrix:
         os:  [ ubuntu-latest, windows-latest, macOS-13 ]
-        dc:  [ ldc-latest, dmd-latest, gdc, gdmd-12 ]
+        dc:  [ ldc-latest, dmd-latest, gdc, gdc-12 ]
         dub: [ 1.19.0, 1.23.0, latest ]
         exclude:
           # Excluded because those are actually Linux executables
           - { os: windows-latest, dub: 1.19.0 }
           # gdc only supports Linux
           - { os: windows-latest, dc: gdc }
-          - { os: windows-latest, dc: gdmd-12 }
+          - { os: windows-latest, dc: gdc-12 }
           - { os: macOS-13, dc: gdc }
-          - { os: macOS-13, dc: gdmd-12 }
+          - { os: macOS-13, dc: gdc-12 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -143,7 +143,6 @@ jobs:
         with:
           compiler: ${{ matrix.dc }}
           dub: ${{ matrix.dub }}
-          gdmd_sha: 'dc0ad9f739795f3ce5c69825efcd5d1d586bb013'
 
       - name: Verify DUB version
         run: |

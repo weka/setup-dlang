@@ -40,6 +40,11 @@ export class Compiler implements ITool {
 	\\) and be relative to the archive root.
     */
     public libPaths: string[]
+    /** the dmd-wrapper executable basename, without any extension.
+
+	Example: 'ldmd2', 'dmd-2.109'
+    */
+    public dmdWrapperExeName: string
 
 
     constructor(url: string,
@@ -48,6 +53,7 @@ export class Compiler implements ITool {
 		version: string,
 		binPath: string,
 		libPaths: string[],
+		dmdWrapperExeName: string,
 	       ){
 	this.url = url
 	this.sig = sig
@@ -55,6 +61,7 @@ export class Compiler implements ITool {
 	this.version = version
 	this.binPath = binPath
 	this.libPaths = libPaths
+	this.dmdWrapperExeName = dmdWrapperExeName
     }
 
     /** Add the binPath to PATH */
@@ -106,9 +113,10 @@ export class Compiler implements ITool {
 	return cached
     }
 
-    /** Set the DC environment variable to point to the newly extracted compiler */
+    /** Set the DC and DMD environment variable to point to the newly extracted compiler */
     setDC(root: string) {
 	core.exportVariable("DC", root + this.binPath + sep + this.name + exeExt)
+	core.exportVariable("DMD", root + this.binPath + sep + this.dmdWrapperExeName + exeExt)
     }
 
     /** Take all the necessary steps to make the compiler available on the host
@@ -360,7 +368,8 @@ export class DMD extends Compiler {
 		throw new Error("Unsupported dmd platform: " + process.platform)
 	}
 	let sig = hasSigFile ? url + '.sig' : undefined;
-	return new DMD(url, sig, name, version, binPath, libPaths)
+	const dmdWrapper = 'dmd'
+	return new DMD(url, sig, name, version, binPath, libPaths, dmdWrapper)
     }
 
     /** Get the highest patch release for a minor release number.
@@ -499,15 +508,16 @@ export class LDC extends Compiler {
 	let libPaths: string[]
 	switch (process.platform) {
             case "win32":  libPaths = [`${basePath}lib64`]; break;
-            case "linux":  libPaths = [`${basePath}lib`, `${basePath}lib64`]; break;
+            case "linux":  libPaths = [`${basePath}lib`]; break;
             case "darwin": libPaths = legacyOsx ?
 		    [`${basePath}lib`] :
 		    [`${basePath}lib-arm64`, `${basePath}lib-x86_64`]; break;
             default:
 		throw new Error("unsupported platform: " + process.platform);
 	}
+	const dmdWrapper = 'ldmd2'
 
-	return new LDC(url, undefined, name, version, binPath, libPaths)
+	return new LDC(url, undefined, name, version, binPath, libPaths, dmdWrapper)
     }
 
     /** Get the suffix of a release archive taking into account the host os */
@@ -736,119 +746,70 @@ export class Dub implements ITool {
 }
 
 export class GDC implements ITool {
-    /** The name of the apt package that will install gdc */
-    private aptPkgName: string
+    /** The version of the gdc apt package that will install gdc, it can by empty
 
-    constructor(aptPkgName: string) {
-	this.aptPkgName = aptPkgName
+	Example:
+	''    -> sudo apt install gdc
+	'-12' -> sudo apt install gdc-12
+     */
+    private aptPkgVersion: string
+    /** A commit sha in https://github.com/D-Programming-GDC/gdmd.
+
+	Example: dc0ad9f739795f3ce5c69825efcd5d1d586bb013
+    */
+    private gdmdSha: string
+
+    constructor(aptPkgVersion: string, gdmdSha: string) {
+	this.aptPkgVersion = aptPkgVersion
+	this.gdmdSha = gdmdSha
     }
 
     /** Parse a user provided version string and convert it to a gdc class
 
 	Common values for versionString are: gdc, gdc-12 or
 	gdc-11.
+	gdmdSha is a full commit sha in https://github.com/D-Programming-GDC/gdmd.
 
 	Note that the implementation only supports linux (and only
 	through apt).
      */
-    static async initialize(versionString: string): Promise<GDC> {
+    static async initialize(versionString: string, gdmdSha: string): Promise<GDC> {
 	if (process.platform != 'linux')
 	    throw new Error(`Gdc is currently only supported on linux, not ${process.platform}`)
+	if (!gdmdSha)
+	    throw new Error('Need a commit sha to dowloand gdmd')
 
 	let match = versionString.match(/^gdc(-\d+)?$/)
 	if (match === null)
 	    throw new Error(`Unrecognized gdc format '${versionString}'`)
+	const aptPkgVersion = match[1] ?? ''
+	const realSha = gdmdSha == 'latest' ? 'master' : gdmdSha
 
-	return new GDC(versionString)
+	return new GDC(aptPkgVersion, realSha)
     }
 
     async makeAvailable() {
-	console.log(`Installing ${this.aptPkgName}`)
+	await this.makeAvailableGdc()
+	await this.makeAvailableGdmd()
+    }
+
+    /** Install gdc from the apt repos and set DC to point to it */
+    async makeAvailableGdc () {
+	const binName = `gdc${this.aptPkgVersion}`
+	console.log(`Installing binName`)
 	await exec.exec('sudo apt-get update')
-	await exec.exec('sudo', ['apt-get', 'install', '-y', this.aptPkgName])
-	console.log(`Setting DC to '/usr/bin/${this.aptPkgName}'`)
-	core.exportVariable('DC', `/usr/bin/${this.aptPkgName}`)
-    }
-}
-
-export class GDMD implements ITool {
-    /** a gdc instance that this class wraps */
-    private gdc: GDC
-    /** The target binary name for the gdmd script
-
-	Example: /usr/bin/gdmd-12
-    */
-    private targetBinName: string
-    /** A commit sha in https://github.com/D-Programming-GDC/gdmd.
-
-	It can be used instead of the gdmd script that is packaged in
-	ubuntu. If it is empty it means that the packaged version is
-	preferred.
-    */
-    private gitCommitSha: string
-
-    constructor(gdc: GDC, targetBinName: string, gitCommitSha: string) {
-	this.gdc = gdc
-	this.targetBinName = targetBinName
-	this.gitCommitSha = gitCommitSha
+	await exec.exec('sudo', ['apt-get', 'install', '-y', binName])
+	console.log(`Setting DC to '/usr/bin/${binName}'`)
+	core.exportVariable('DC', `/usr/bin/${binName}`)
     }
 
-    /** Initialize a GDMD class from a user provided version string.
-
-	The format of the versionString is the same as for the GDC
-	class except that the name starts with gdmd instead of gdc.
-
-	@param gitCommitSha - a commit sha in
-	https://github.com/D-Programming-GDC/gdmd. If not empty the
-	git version of gdmd is preferred over the one in the ubuntu
-	repositories.
-    */
-    static async initialize(versionString: string, gitCommitSha: string)
-    : Promise<GDMD> {
-	if (!versionString.startsWith('gdmd'))
-	    throw new Error(`gdmd version doesn't start with gdmd: '${versionString}'`)
-	let gdcString = 'gdc' + versionString.slice('gdmd'.length)
-	let gdc = await GDC.initialize(gdcString)
-
-	return new GDMD(gdc, `/usr/bin/${versionString}`, gitCommitSha)
-    }
-
-    async makeAvailable() {
-	await this.gdc.makeAvailable()
-
-	if (this.gitCommitSha)
-	    await this.makeAvailableFromHash()
-	else
-	    await this.makeAvailableFromApt()
-	await this.makeExecutable()
-	console.log(`Setting DC to '${this.targetBinName}'`)
-	core.exportVariable('DC', this.targetBinName)
-    }
-
-    /** Make the gdmd program executable */
-    private async makeExecutable() {
-	await exec.exec('sudo', ['chmod', '+x', this.targetBinName])
-    }
-
-    /** Install gdmd using apt.
-
-	This is not entirely sufficient as the script has to be
-	renamed to match this.targetBinName, otherwise it will use the
-	wrong version of gdc.
-     */
-    private async makeAvailableFromApt() {
-	await exec.exec('sudo apt-get install -y gdmd')
-	if (this.targetBinName != '/usr/bin/gdmd') {
-	    console.log(`Copying gdmd script to ${this.targetBinName}`)
-	    await exec.exec('sudo', ['cp', '/usr/bin/gdmd', this.targetBinName])
-	}
-    }
-
-    /** Install gdmd from a hash in the D-Programming-GDC/gdmd repo */
-    private async makeAvailableFromHash() {
-	if (!this.gitCommitSha)
-	    throw new Error("Internal error, no git commit sha for gdmd")
-	const sha = this.gitCommitSha
+    /** Install gdmd from https://github.com/D-Programming-GDC/gdmd and set DMD to point to it */
+    async makeAvailableGdmd () {
+	const sha = this.gdmdSha
+	// gdmd should match the executable name of gdc.
+	// If /usr/bin/gdc-11 then the script should be in /usr/bin/gdmd-11
+	// If /usr/bin/gdc then the script should be in /usr/bin/gdmd
+	const binName = `/usr/bin/gdmd${this.aptPkgVersion}`
 
 	let cached = tc.find('gdmd', sha)
 	if (!cached) {
@@ -857,7 +818,11 @@ export class GDMD implements ITool {
 	    cached = await tc.cacheFile(path, 'gdmd', 'gdmd', sha)
 	}
 
-	console.log(`Copying gdmd script to ${this.targetBinName}`)
-	await exec.exec('sudo', ['cp', cached + '/gdmd', this.targetBinName])
+	console.log(`Copying gdmd script to ${binName}`)
+	await exec.exec('sudo', ['cp', cached + '/gdmd', binName])
+	await exec.exec('sudo', ['chmod', '+x', binName])
+
+	console.log(`Setting DMD to '${binName}'`)
+	core.exportVariable('DMD', binName)
     }
 }

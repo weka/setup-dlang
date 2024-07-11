@@ -1,10 +1,12 @@
 import { DMD } from '../src/d'
 import * as utils from '../src/utils'
 import * as testUtils from './test-helpers.test'
+import * as tc from '@actions/tool-cache'
+import fs from 'fs'
 
+testUtils.hideConsoleLogs()
 testUtils.saveProcessRestorePoint()
 testUtils.disableNetwork()
-afterEach(() => jest.restoreAllMocks())
 function init(version: string) { return DMD.initialize(version, '') }
 
 describe('amd64', () => {
@@ -431,4 +433,64 @@ test('dmd fails on non-x64', async () => {
 test('dmd fails on unsupported platforms', async () => {
     Object.defineProperty(process, 'platform', { value: 'freebsd' })
     expect(init('dmd-2.109.0')).rejects.toThrow(process.platform)
+})
+
+
+describe('Test makeAvailable', () => {
+    const root = '/tmp/cache'
+    const origEnv = process.env
+
+    // These values are cached so they match the hosts
+    const sep = (process.platform == 'win32' ? '\\' : '/')
+    const exeExt = (process.platform == 'win32' ? '.exe' : '')
+    const pathSep = (process.platform == 'win32' ? ';' : ':')
+
+    beforeEach(() => {
+	Object.defineProperty(process, 'arch', { value: 'x64' })
+	jest.spyOn(tc, 'find').mockReturnValue(root)
+	jest.spyOn(fs, 'existsSync').mockReturnValue(true)
+	process.env['PATH'] = '/bin'
+	process.env['LD_LIBRARY_PATH'] = ''
+    })
+    afterEach(() => process.env = origEnv)
+
+    test('linux', async () => {
+	Object.defineProperty(process, 'platform', { value: 'linux' })
+	const dmd = await init('dmd-2.109.1')
+	await dmd.makeAvailable()
+	expect(process.env['PATH']).toBe(root + '/dmd2/linux/bin64' + pathSep + '/bin')
+	expect(process.env['LD_LIBRARY_PATH']).toBe(root + '/dmd2/linux/lib64')
+	expect(process.env['DC']).toBe(root + `/dmd2/linux/bin64${sep}dmd${exeExt}`)
+	expect(process.env['DMD']).toBe(root + `/dmd2/linux/bin64${sep}dmd${exeExt}`)
+    })
+
+    test('osx', async () => {
+	Object.defineProperty(process, 'platform', { value: 'darwin' })
+	const dmd = await init('dmd-2.109.1')
+	await dmd.makeAvailable()
+	expect(process.env['PATH']).toBe(root + '/dmd2/osx/bin' + pathSep + '/bin')
+	expect(process.env['LD_LIBRARY_PATH']).toBe(root + '/dmd2/osx/lib')
+	expect(process.env['DC']).toBe(root + `/dmd2/osx/bin${sep}dmd${exeExt}`)
+	expect(process.env['DMD']).toBe(root + `/dmd2/osx/bin${sep}dmd${exeExt}`)
+    })
+
+    test('windows', async () => {
+	Object.defineProperty(process, 'platform', { value: 'win32' })
+	const dmd = await init('dmd-2.109.1')
+	await dmd.makeAvailable()
+
+	const bits64 = root + '\\dmd2\\windows\\bin64'
+	const bits32 = root + '\\dmd2\\windows\\bin'
+	const splitPath = process.env['PATH']!.split(pathSep)
+	const found64 = splitPath.indexOf(bits64)
+	const found32 = splitPath.indexOf(bits32)
+	// check that both folders appear in PATH
+	expect(found64).toBeGreaterThanOrEqual(0)
+	expect(found32).toBeGreaterThanOrEqual(0)
+	// Check that the 64bit folder appears before the 32bit one
+	expect(found64).toBeLessThan(found32)
+
+	expect(process.env['DC']).toBe(root + `\\dmd2\\windows\\bin64${sep}dmd${exeExt}`)
+	expect(process.env['DMD']).toBe(root + `\\dmd2\\windows\\bin64${sep}dmd${exeExt}`)
+    })
 })

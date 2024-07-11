@@ -1,14 +1,11 @@
 import * as main from '../src/main'
 import * as core from '@actions/core'
 import * as d from '../src/d'
+import * as testUtils from './test-helpers.test'
+testUtils.saveProcessRestorePoint()
 
 describe('Testing compiler when...', function(){
-    let originalArch: string
-
-    beforeAll(function(){
-	originalArch = process.arch;
-	jest.spyOn(core, 'getInput').mockReturnValue('')
-    });
+    beforeAll(() => jest.spyOn(core, 'getInput').mockReturnValue(''))
 
     test('it is unspecified', () => {
 	Object.defineProperty(process, 'arch', { value: 'x64' })
@@ -45,10 +42,6 @@ describe('Testing compiler when...', function(){
 	mockCompiler('dmd-beta')
 	expect(main.getActionInputs).toThrow('dmd')
     })
-
-    afterAll(function(){
-	Object.defineProperty(process, 'arch', { value: originalArch });
-    });
 });
 
 test('All action inputs', () => {
@@ -81,15 +74,11 @@ describe('Action messages', () => {
 	jest.spyOn(d.DMD, 'initialize').mockResolvedValue(<any>nopTool)
 	jest.spyOn(d.LDC, 'initialize').mockResolvedValue(<any>nopTool)
 	jest.spyOn(d.GDC, 'initialize').mockResolvedValue(<any>nopTool)
-	jest.spyOn(d.GDMD, 'initialize').mockResolvedValue(<any>nopTool)
 	jest.spyOn(d.Dub, 'initialize').mockResolvedValue(<any>nopTool)
 	// Silence the failures
 	jest.spyOn(core, 'setFailed').mockImplementation(() => {})
     })
-    beforeEach(() => {
-	nopTool.makeAvailable.mockClear()
-	consoleSpy.mockClear()
-    })
+    beforeEach(() => jest.clearAllMocks())
 
     function mockInputs(compiler: string, dub: string = '') {
 	jest.spyOn(core, 'getInput').mockImplementation((key) => {
@@ -138,7 +127,7 @@ describe('Action messages', () => {
 
     test('Specifying a valid compiler', async () => {
 	// This is only for coverage's sake
-	for (var comp of [ 'dmd', 'ldc', 'gdc', 'gdmd' ]) {
+	for (var comp of [ 'dmd', 'ldc-11.3.0', 'gdc-12' ]) {
 	    mockInputs(comp)
 	    await main.run()
 	    expect(nopTool.makeAvailable).toHaveBeenCalledTimes(1)

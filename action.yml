@@ -14,7 +14,7 @@ inputs:
     required: false
   gdmd_sha:
     description: "Commit sha in https://github.com/D-Programming-GDC/gdmd, used only by the gdmd compiler"
-    required: false
+    default: 'latest'
 runs:
   using: "node20"
   main: "dist/index.js"

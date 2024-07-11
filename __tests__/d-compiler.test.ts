@@ -13,7 +13,8 @@ describe('Test Compiler class', () => {
     const bin = '/relative/path/to/bin'
     const libs = [ '/first', '/second' ]
     const name = 'compiler_name'
-    let c = new Compiler('url', undefined, name, 'ver', bin, libs)
+    const dmdWrapper = 'dmd_wrapper'
+    let c = new Compiler('url', undefined, name, 'ver', bin, libs, dmdWrapper)
     const root = '/root/folder'
 
     // The values are computed when d.ts is imported so
@@ -99,6 +100,7 @@ describe('Test Compiler class', () => {
 	    expect(process.env['PATH']).toBe(root + bin + pathSep + '/bin')
 	    expect(process.env['LD_LIBRARY_PATH']).toBe(root + libs[1])
 	    expect(process.env['DC']).toBe(`${root}${bin}${sep}${name}${extension}`)
+	    expect(process.env['DMD']).toBe(`${root}${bin}${sep}${dmdWrapper}${extension}`)
 	}
 
 
@@ -112,13 +114,15 @@ describe('Test Compiler class', () => {
 	    `${root}${bin}${pathSep}` + '\\bin'
 	expect(process.env['PATH']).toBe(expPath)
 	expect(process.env['DC']).toBe(`${root}${bin}${sep}${name}${extension}`)
+	expect(process.env['DMD']).toBe(`${root}${bin}${sep}${dmdWrapper}${extension}`)
     })
 
-    test('DC gets set to the absolute path of the compiler', () => {
+    test('DC and DMD get set to the absolute path of the compiler', () => {
 	for (const platform of [ 'linux', 'win32', 'darwin', 'freebsd' ]) {
 	    Object.defineProperty(process, 'platform', { value: platform })
 	    c.setDC(root)
 	    expect(process.env['DC']).toBe(root + bin + sep + name + extension)
+	    expect(process.env['DMD']).toBe(root + bin + sep + dmdWrapper + extension)
 	}
     })
 })

@@ -32,9 +32,7 @@ export async function run() {
 	else if (d_compiler.startsWith('ldc'))
 	    compiler = await d.LDC.initialize(d_compiler, gh_token)
 	else if (d_compiler.startsWith('gdc'))
-	    compiler = await d.GDC.initialize(d_compiler)
-	else if (d_compiler.startsWith('gdmd'))
-	    compiler = await d.GDMD.initialize(d_compiler, gdmd_sha)
+	    compiler = await d.GDC.initialize(d_compiler, gdmd_sha)
 	else
 	    throw new Error(`Unrecognized compiler: '${d_compiler}'`)
 

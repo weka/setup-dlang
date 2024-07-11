@@ -63,9 +63,9 @@ jobs:
         exclude:
           - { os: windows-latest, dc: gdc-12 }
           - { os: macOS-latest, dc: gdc-12 }
-        # Or include them manually, optionally using gdmd instead of gdc
+        # Or include them manually
         include:
-          - { os: ubuntu-latest, dc: gdmd }
+          - { os: ubuntu-latest, dc: gdc }
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -85,7 +85,7 @@ jobs:
 ```
 
 
-Simply add the setup-dlang action to your GitHub Actions workflow to automatically download and install a D compiler and package manager bundled with the compiler or separately downloaded. The action will automatically add the D binaries to the `PATH` environment variable and set the `DC` environment variable to the selected compiler.
+Simply add the setup-dlang action to your GitHub Actions workflow to automatically download and install a D compiler and package manager bundled with the compiler or separately downloaded. The action will automatically add the D binaries to the `PATH` environment variable and set the `DC` and `DMD` environment variables to point to the to the selected compiler and to the dmd wrapper (`gdmd`, `ldmd2`, or `dmd`) of the compiler respectively.
 Note, this behavior has been slightly adjusted in v2.
 For more details check the changes below.
 
@@ -102,10 +102,11 @@ Examples:
 ```yml
 - uses: dlang-community/setup-dlang@v2
   with:
-    compiler: gdmd-12
+    compiler: gdc-12
     # dub doesn't come with gdc
     dub: latest
     # Install gdmd from https://github.com/D-Programming-GDC/gdmd/blob/0a64b92ec5ad1177988496df4f3ca47c47580501/dmd-script
+    # instead of the master branch
     gdmd_sha: '0a64b92ec5ad1177988496df4f3ca47c47580501'
 ```
 
@@ -146,21 +147,16 @@ All the ways it can be specified are:
 - `ldc-master` - install the latest CI artifacts from https://github.com/ldc-developers/ldc/releases/CI.
   This may requires a github api token.
 
-- `gdc` - install the apt package `gdc`
-- `gdc-12` - install the apt package `gdc-12`
-- `gdmd` - install the apt packages `gdc` and `gdmd`
-- `gdmd-12` - install the apt packages `gdc-12` and `gdmd`.
+- `gdc` - install the apt package `gdc` and the `gdmd` script
+- `gdc-12` - install the apt package `gdc-12` and the `gdmd` script
   The available versions of gdc you can install are the versions available in the ubuntu repositories. For `ubuntu-22.04` (`ubuntu-latest` currently) those are `gdc-12`, `gdc-11`, and, `gdc` which corresponds to `gdc-11`. If in doubt check https://packages.ubuntu.com
 
 Whatever compiler you specify you can expect that the environment variable `$DC` will be set to point to that compiler binary.
+Additionally `$DMD` will point to the dmd wrapper of the aforementioned compiler if you require a consistent command line interface.
 Currently absolute paths are used but you shouldn't depend on it.
 The compiler bin folder is also added to `$PATH` so you can run programs like `rdmd` or `dub` without specifying full paths.
 Less useful but the library directory of the compiler is also added to `$PATH` on windows and `LD_LIBRARY_PATH` on linux and macos.
 The compilers are already configured to embed this path themselves so you really shouldn't have to consider this but know that it is set.
-
-The distinction between `gdc` and `gdmd` is mostly what the `$DC` variable gets set to.
-The `gdc` program uses command line arguments that don't match the ones used by `dmd` or `ldc`.
-If your project uses these you can specify `gdmd` instead of `gdc` to get a more portable command line interface.
 
 ### dub
 
@@ -179,7 +175,14 @@ Github [generates](https://docs.github.com/en/actions/security-guides/automatic-
 
 ### gdmd_sha
 
-In case the `gdmd` script in the ubuntu repositories is too old you can specify a commit sha in https://github.com/D-Programming-GDC/gdmd and this action will use that to download a git version of the script.
+The gdmd script is downloaded straight from the [upstream](https://github.com/D-Programming-GDC/gdmd) repository.
+You can specify a custom commit sha or a branch name in case the default one is not appropriate for your use case.
+Examples include `dc0ad9f739795f3ce5c69825efcd5d1d586bb013`, `master`, or the special value `latest`, which acts similarly to `master`.
+
+Usage of `latest` instead of `master` is preferred for portability reasons.
+Take as an example that upstream may rename the development branch to `main` or `trunk` in which case the old name `master` will not work anymore.
+
+The default value for this input is `latest` and it is required when using GDC.
 
 ## Compiler support
 
@@ -239,3 +242,14 @@ When specifying `dmd-beta` the action may install `dmd-latest` if it determines 
 Example, if the latest DMD beta is `2.098.1_rc1` and the latest DMD release is `2.099.0` then `dmd-beta` will now resolve to `2.099.0` instead of `2.098.1_rc1`.
 
 The minimum available version of dmd has been raised to `2.065.0`.
+
+## Changes from v2
+
+gdmd is no longer downloaded from the ubuntu repos, it is always pulled in from [D-Programming-GDC/gdmd](https://github.com/D-Programming-GDC/gdmd).
+
+The `gdmd` input to the action has been removed.
+Now it is downloaded and setup unconditionally.
+
+Introduces the `DMD` variable which will point to the dmd wrapper of the selected compiler.
+For example if you install `ldc-1.37.0` then `DC` will point to `<extracted_path>/ldc2` and `DMD` will point to `<extracted_path>/ldmd2`
+This variable is setup for all compilers, automatically.

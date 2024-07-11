@@ -9,6 +9,9 @@ inputs:
     description: "Token to use when doing Github API request (for ldc-master)"
     default: ${{ github.token }}
     required: false
+  gdmd_sha:
+    descript: "Commit in D-programming-gdc/gdmd"
+    default: 'latest'
 runs:
   using: "composite"
   steps:
@@ -17,10 +20,21 @@ runs:
       with:
         compiler: ${{ inputs.dc }}
         gh_token: ${{ inputs.gh_token }}
+        gdmd_sha: ${{ inputs.gdmd_sha }}
 
     - name: Verify D compiler ($DC)
       shell: bash
-      run: $DC .github/hello.d && ./hello
+      run: |
+        $DC .github/hello.d
+        if [[ ${DC} == *gdc* ]]; then
+            ./a.out
+        else
+            ./hello
+        fi
+
+    - name: Verify D Compiler dmd-wrapper ($DMD)
+      shell: bash
+      run: $DMD -run .github/hello.d
 
     - name: Verify D compiler with explicit bitness ($DC)
       if: ${{ startsWith(inputs.dc, 'dmd') }}

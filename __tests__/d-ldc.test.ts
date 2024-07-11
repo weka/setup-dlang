@@ -1,12 +1,13 @@
 import { LDC } from '../src/d'
 import * as utils from '../src/utils'
 import * as testUtils from './test-helpers.test'
+import * as tc from '@actions/tool-cache'
+import fs from 'fs'
 
 testUtils.saveProcessRestorePoint()
 testUtils.disableNetwork()
 testUtils.hideConsoleLogs()
 
-afterEach(() => jest.restoreAllMocks())
 async function doTest(input: string, url: string, sig: string | undefined,
 		      version: string, binPath: string, libPaths: string | string[]) {
     const ldc = await LDC.initialize(input, '')
@@ -454,4 +455,52 @@ test('ldc-master gracefully handles malformed assets', async () => {
 test('ldc fails on unsupported platforms', async () => {
     Object.defineProperty(process, 'platform', { value: 'freebsd' })
     expect(init('ldc-1.39.0')).rejects.toThrow(process.platform)
+})
+
+describe('Test makeAvailable', () => {
+    const root = '/tmp/cache'
+    const origEnv = process.env
+
+    // These values are cached so they match the hosts
+    const sep = (process.platform == 'win32' ? '\\' : '/')
+    const exeExt = (process.platform == 'win32' ? '.exe' : '')
+    const pathSep = (process.platform == 'win32' ? ';' : ':')
+
+    beforeEach(() => {
+	Object.defineProperty(process, 'arch', { value: 'x64' })
+	jest.spyOn(tc, 'find').mockReturnValue(root)
+	jest.spyOn(fs, 'existsSync').mockReturnValue(true)
+	process.env['PATH'] = '/bin'
+	process.env['LD_LIBRARY_PATH'] = ''
+    })
+    afterEach(() => process.env = origEnv)
+
+    test('linux', async () => {
+	Object.defineProperty(process, 'platform', { value: 'linux' })
+	const ldc = await init('ldc-1.39.0')
+	await ldc.makeAvailable()
+	expect(process.env['PATH']).toBe(root + '/ldc2-1.39.0-linux-x86_64/bin' + pathSep + '/bin')
+	expect(process.env['LD_LIBRARY_PATH']).toBe(root + '/ldc2-1.39.0-linux-x86_64/lib')
+	expect(process.env['DC']).toBe(root + `/ldc2-1.39.0-linux-x86_64/bin${sep}ldc2${exeExt}`)
+	expect(process.env['DMD']).toBe(root + `/ldc2-1.39.0-linux-x86_64/bin${sep}ldmd2${exeExt}`)
+    })
+
+    test('osx', async () => {
+	Object.defineProperty(process, 'platform', { value: 'darwin' })
+	const ldc = await init('ldc-1.39.0')
+	await ldc.makeAvailable()
+	expect(process.env['PATH']).toBe(root + '/ldc2-1.39.0-osx-universal/bin' + pathSep + '/bin')
+	expect(process.env['LD_LIBRARY_PATH']).toBe(root + '/ldc2-1.39.0-osx-universal/lib-x86_64' + ':' + root + '/ldc2-1.39.0-osx-universal/lib-arm64')
+	expect(process.env['DC']).toBe(root + `/ldc2-1.39.0-osx-universal/bin${sep}ldc2${exeExt}`)
+	expect(process.env['DMD']).toBe(root + `/ldc2-1.39.0-osx-universal/bin${sep}ldmd2${exeExt}`)
+    })
+
+    test('windows', async () => {
+	Object.defineProperty(process, 'platform', { value: 'win32' })
+	const ldc = await init('ldc-1.39.0')
+	await ldc.makeAvailable()
+	expect(process.env['PATH']).toBe(root + '\\ldc2-1.39.0-windows-multilib\\lib64' + pathSep + root + '\\ldc2-1.39.0-windows-multilib\\bin' + pathSep + '/bin')
+	expect(process.env['DC']).toBe(root + `\\ldc2-1.39.0-windows-multilib\\bin${sep}ldc2${exeExt}`)
+	expect(process.env['DMD']).toBe(root + `\\ldc2-1.39.0-windows-multilib\\bin${sep}ldmd2${exeExt}`)
+    })
 })
