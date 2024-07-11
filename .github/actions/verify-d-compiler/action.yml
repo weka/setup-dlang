@@ -25,28 +25,48 @@ runs:
     - name: Verify D compiler ($DC)
       shell: bash
       run: |
-        $DC .github/hello.d
+        mkdir -p d-ver-simple
+        pushd d-ver-simple
+        $DC ../.github/hello.d
         if [[ ${DC} == *gdc* ]]; then
             ./a.out
         else
             ./hello
         fi
+        popd
 
     - name: Verify D Compiler dmd-wrapper ($DMD)
       shell: bash
-      run: $DMD -run .github/hello.d
+      run: |
+        mkdir -p d-ver-run
+        pushd d-ver-run
+        $DMD -run ../.github/hello.d
+        popd
 
     - name: Verify D compiler with explicit bitness ($DC)
       if: ${{ startsWith(inputs.dc, 'dmd') }}
       shell: bash
-      run: $DC -m64 .github/hello.d && ./hello
+      run: |
+        mkdir -p d-ver-m
+        pushd d-ver-m
+        $DC -m64 ../.github/hello.d && ./hello
+        popd
 
     - name: Verify D compiler ($DC, shared)
       if: ${{ !startsWith(inputs.dc, 'g') }} # fails with gdc
       shell: bash
-      run: $DC -shared .github/hello.d && ./hello
+      run: |
+        mkdir -p d-ver-shared
+        pushd d-ver-shared
+        $DC -shared ../.github/hello.d
+        popd
+
 
     - name: Verify D compiler (dub)
       if: ${{ !startsWith(inputs.dc, 'g') }} # dub doesn't come with gdc by default
       shell: bash
-      run: dub run --single -q .github/hello.d
+      run: |
+        mkdir -p d-ver-dub
+        pushd d-ver-dub
+        dub run --single -q ../.github/hello.d
+        popd
