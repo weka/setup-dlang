@@ -333,8 +333,14 @@ export class DMD extends Compiler {
 	    case "win32":
 		url += '.windows'
 		url += minor < 69 ? '.zip' : '.7z'
-		binPath = '\\dmd2\\windows\\bin'
-		libPaths = [ "\\dmd2\\windows\\bin64" ]
+		// Since 2.091.0-beta.1 there are 64 bit binaries,
+		// before that there were only 32 bit.
+		const suffix = minor >= 91 ? '64' : ''
+		binPath = `\\dmd2\\windows\\bin${suffix}`
+		// Like https://dlang.org/install.sh we set PATH to
+		// search first in \bin64 then in \bin. The order is reversed
+		// since the values below are prepended to PATH, in order.
+		libPaths = [ '\\dmd2\\windows\\bin', '\\dmd2\\windows\\bin64' ]
 		break
 	    case "linux":
 		url += '.linux'
@@ -346,7 +352,7 @@ export class DMD extends Compiler {
 		url += '.osx'
 		url += minor < 69 ? '.zip' : '.tar.xz'
 		binPath = '/dmd2/osx/bin'
-		libPaths = [ "/dmd2/linux/lib" ]
+		libPaths = [ "/dmd2/osx/lib" ]
 		break
 	    default:
 		throw new Error("Unsupported dmd platform: " + process.platform)
