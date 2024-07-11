@@ -7,46 +7,52 @@ import * as d from './d'
 import { existsSync } from 'fs';
 import { extract } from './utils'
 
-async function run() {
+export function getActionInputs() {
+    let default_compiler = "dmd-latest";
+    if (process.arch != "x64") {
+        default_compiler = "ldc-latest";
+    }
+    const d_compiler = core.getInput('compiler') || default_compiler;
+    if (process.arch != "x64" && d_compiler.startsWith("dmd"))
+        throw new Error("The dmd compiler is not supported for non-x64 architecture");
+    const gh_token = core.getInput('gh_token') || "";
+    const dub_version = core.getInput('dub') || "";
+    const gdmd_sha = core.getInput('gdmd_sha') || ""
+
+    return { d_compiler, gh_token, dub_version, gdmd_sha };
+}
+
+export async function run() {
     try {
-        let default_compiler = "dmd-latest";
-        if (process.arch != "x64") {
-            default_compiler = "ldc-latest";
-        }
-        const input = core.getInput('compiler') || default_compiler;
-        if (process.arch != "x64" && input.startsWith("dmd"))
-            throw new Error("The dmd compiler is not supported for non-x64 architecture");
-        const gh_token = core.getInput('gh_token') || "";
-        const dub_version = core.getInput('dub') || "";
-	const gdmd_sha = core.getInput('gdmd_sha') || ""
+	let { d_compiler, gh_token, dub_version, gdmd_sha } = getActionInputs();
 
 	let compiler: d.ITool
-	if (input.startsWith('dmd'))
-	    compiler = await d.DMD.initialize(input, gh_token)
-	else if (input.startsWith('ldc'))
-	    compiler = await d.LDC.initialize(input, gh_token)
-	else if (input.startsWith('gdc'))
-	    compiler = await d.GDC.initialize(input)
-	else if (input.startsWith('gdmd'))
-	    compiler = await d.GDMD.initialize(input, gdmd_sha)
+	if (d_compiler.startsWith('dmd'))
+	    compiler = await d.DMD.initialize(d_compiler, gh_token)
+	else if (d_compiler.startsWith('ldc'))
+	    compiler = await d.LDC.initialize(d_compiler, gh_token)
+	else if (d_compiler.startsWith('gdc'))
+	    compiler = await d.GDC.initialize(d_compiler)
+	else if (d_compiler.startsWith('gdmd'))
+	    compiler = await d.GDMD.initialize(d_compiler, gdmd_sha)
 	else
-	    throw new Error(`Unrecognized compiler: '${input}'`)
+	    throw new Error(`Unrecognized compiler: '${d_compiler}'`)
 
 	let dub: d.Dub | undefined
         if (dub_version.length) {
 	    dub = await d.Dub.initialize(dub_version, gh_token)
-            console.log(`Enabling ${input} with dub ${dub_version}`);
+            console.log(`Enabling ${d_compiler} with dub ${dub_version}`);
         } else
-            console.log(`Enabling ${input}`);
+            console.log(`Enabling ${d_compiler}`);
 
 	await compiler.makeAvailable()
 	await dub?.makeAvailable()
 
         console.log("Done");
-    } catch (error: any) {
-	console.log(error);
-	core.setFailed(error.message);
+    } catch (error) {
+	if (error instanceof Error) {
+	    console.log(error.message);
+	    core.setFailed(error.message);
+	}
     }
 }
-
-run();
