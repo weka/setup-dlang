@@ -1,6 +1,5 @@
 import * as core from '@actions/core';
 import * as tc from '@actions/tool-cache';
-import { rmRF } from '@actions/io';
 import * as gpg from './gpg';
 
 import * as d from './d'
