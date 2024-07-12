@@ -255,3 +255,6 @@ This variable is setup for all compilers, automatically.
 
 `dmd` is now allowed on `macos-latest` (arm64).
 It should work even if it's a x86_64 binary thanks to the Rosetta compatibility layer.
+
+Updated a lot of dependencies, changed the output target to es2022 from es2017.
+This means that one no longer needs to set `NODE_OPTIONS=--openssl-legacy-provider` when building.

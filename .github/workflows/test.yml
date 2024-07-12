@@ -20,8 +20,6 @@ jobs:
         with:
           node-version: 20
       - name: diff-ing dist/index.js
-        env:
-            NODE_OPTIONS: "--openssl-legacy-provider"
         run: |
           set -euxo pipefail
           npm ci
