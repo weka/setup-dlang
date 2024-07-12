@@ -10,6 +10,8 @@ function init (version: string) { return Dub.initialize(version, '') }
 
 
 test('Test dub URLs for exact versions', async () => {
+    Object.defineProperty(process, 'arch', { value: 'x64' })
+
     Object.defineProperty(process, 'platform', { value: 'linux' })
     await expect(init('v1.38.1')).resolves.toHaveProperty(
 	'url', 'https://github.com/dlang/dub/releases/download/v1.38.1/dub-v1.38.1-linux-x86_64.tar.gz')
@@ -24,6 +26,7 @@ test('Test dub URLs for exact versions', async () => {
 })
 
 test('Test that dub accepts both v<version> and <version>', async () => {
+    Object.defineProperty(process, 'arch', { value: 'x64' })
     Object.defineProperty(process, 'platform', { value: 'linux' })
     await expect(init('v1.37.0')).resolves.toHaveProperty(
 	'url', 'https://github.com/dlang/dub/releases/download/v1.37.0/dub-v1.37.0-linux-x86_64.tar.gz')
@@ -85,4 +88,20 @@ test('Test that dub adds itself to PATH', async () => {
     }
 
     process.env = origEnv
+})
+
+test('Test that dub uses arm64 binaries on arm64 macos when available', async () => {
+    Object.defineProperty(process, 'platform', { value: 'darwin' })
+
+    Object.defineProperty(process, 'arch', { value: 'arm64' })
+    await expect(init('v1.38.1')).resolves.toHaveProperty(
+	'url', 'https://github.com/dlang/dub/releases/download/v1.38.1/dub-v1.38.1-osx-arm64.tar.gz')
+    await expect(init('v1.38.0')).resolves.toHaveProperty(
+	'url', 'https://github.com/dlang/dub/releases/download/v1.38.0/dub-v1.38.0-osx-x86_64.tar.gz')
+
+    Object.defineProperty(process, 'arch', { value: 'x64' })
+    await expect(init('v1.38.1')).resolves.toHaveProperty(
+	'url', 'https://github.com/dlang/dub/releases/download/v1.38.1/dub-v1.38.1-osx-x86_64.tar.gz')
+    await expect(init('v1.38.0')).resolves.toHaveProperty(
+	'url', 'https://github.com/dlang/dub/releases/download/v1.38.0/dub-v1.38.0-osx-x86_64.tar.gz')
 })

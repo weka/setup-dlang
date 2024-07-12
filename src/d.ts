@@ -705,22 +705,39 @@ export class Dub implements ITool {
 	if (matches[2])
 	    throw new Error("only release versions of DUB are supported, not: " + version)
 	version = "v" + matches[1];
+
+	const archSuffix = Dub.getUrlArchSuffix(version)
 	let url: string
 	switch (process.platform) {
             case "win32":
-		url = `https://github.com/dlang/dub/releases/download/${version}/dub-${version}-windows-x86_64.zip`
+		url = `https://github.com/dlang/dub/releases/download/${version}/dub-${version}-windows-${archSuffix}.zip`
 		break
             case "linux":
-		url = `https://github.com/dlang/dub/releases/download/${version}/dub-${version}-linux-x86_64.tar.gz`
+		url = `https://github.com/dlang/dub/releases/download/${version}/dub-${version}-linux-${archSuffix}.tar.gz`
 		break
             case "darwin":
-		url = `https://github.com/dlang/dub/releases/download/${version}/dub-${version}-osx-x86_64.tar.gz`
+		url = `https://github.com/dlang/dub/releases/download/${version}/dub-${version}-osx-${archSuffix}.tar.gz`
 		break
         default:
 		throw new Error("unsupported platform: " + process.platform);
 	}
 
 	return new Dub(url, version)
+    }
+
+    static getUrlArchSuffix (version: string) {
+	if (process.arch == 'x64')
+	    return 'x86_64'
+
+	if (process.arch == 'arm64' && process.platform == 'darwin') {
+	    const sv = semver.parseSimpleSemver(version)
+	    const hasArm64Binaries: semver.SemVer = [1, 38, 1, []]
+	    if (semver.cmpSemver(sv, hasArm64Binaries) >= 0)
+		return 'arm64'
+	    return 'x86_64'
+	}
+
+	throw new Error(`Unsupported platform-arch triple (${process.platform}-${process.arch}) for dub releases ${version}`)
     }
 
     /** Return the path to where the url archive was extracted, after caching it */

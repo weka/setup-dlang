@@ -258,3 +258,6 @@ It should work even if it's a x86_64 binary thanks to the Rosetta compatibility 
 
 Updated a lot of dependencies, changed the output target to es2022 from es2017.
 This means that one no longer needs to set `NODE_OPTIONS=--openssl-legacy-provider` when building.
+
+Use arm64 binaries for dub on macos, when applicable.
+Dub started publishing macos binaries since version [1.38.1](https://github.com/dlang/dub/releases/tag/v1.38.1)
