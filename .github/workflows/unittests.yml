@@ -30,4 +30,4 @@ jobs:
         run: |
           set -euxo pipefail
           npm ci
-          npm test
+          GITHUB_ENV= GITHUB_PATH= npm test
