@@ -14,6 +14,7 @@ jobs:
   run-typescript-unittests:
     name: Run all the typescript unittests
     strategy:
+      fail-fast: false
       matrix:
         # This could be run on only one machine but run on all of them
         # to make sure that other developers can run the tests on
