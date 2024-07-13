@@ -231,7 +231,13 @@ Additionally, some tags of dub (`v1.29.1` - `v1.36.0`) don't have releases so yo
 
 ## Changes from v1
 
-The most important change is the `$DC` environment variable becoming an absolute path instead of only the filename.
+You can now specify `gdc` or `gdc-<version>` as inputs to this action, with the caveat that they only work on Linux runners.
+
+Introduces the `DMD` variable which will point to the dmd wrapper of the selected compiler.
+For example if you install `ldc-1.37.0` then `DC` will point to `<extracted_path>/ldc2` and `DMD` will point to `<extracted_path>/ldmd2`
+This variable is setup for all compilers, automatically.
+
+The most breaking change is the `$DC` environment variable becoming an absolute path instead of only the filename.
 Depending on how it is used in scripts care must be taken to properly quote it especially on windows to avoid the `\` character being lost.
 
 DMD versions prior to `dmd-2.072` will no longer install dub automatically.
@@ -242,22 +248,14 @@ Example, if the latest DMD beta is `2.098.1_rc1` and the latest DMD release is `
 
 The minimum available version of dmd has been raised to `2.065.0`.
 
-## Changes from v2
-
-gdmd is no longer downloaded from the ubuntu repos, it is always pulled in from [D-Programming-GDC/gdmd](https://github.com/D-Programming-GDC/gdmd).
-
-The `gdmd` input to the action has been removed.
-Now it is downloaded and setup unconditionally.
-
-Introduces the `DMD` variable which will point to the dmd wrapper of the selected compiler.
-For example if you install `ldc-1.37.0` then `DC` will point to `<extracted_path>/ldc2` and `DMD` will point to `<extracted_path>/ldmd2`
-This variable is setup for all compilers, automatically.
-
 `dmd` is now allowed on `macos-latest` (arm64).
 It should work even if it's a x86_64 binary thanks to the Rosetta compatibility layer.
+
+Use arm64 binaries for dub on macos, when applicable.
+Dub started publishing macos binaries since version [1.38.1](https://github.com/dlang/dub/releases/tag/v1.38.1)
 
 Updated a lot of dependencies, changed the output target to es2022 from es2017.
 This means that one no longer needs to set `NODE_OPTIONS=--openssl-legacy-provider` when building.
 
-Use arm64 binaries for dub on macos, when applicable.
-Dub started publishing macos binaries since version [1.38.1](https://github.com/dlang/dub/releases/tag/v1.38.1)
+Added unittests.
+To run them use `npm test`.
