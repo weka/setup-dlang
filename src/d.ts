@@ -475,6 +475,8 @@ export class LDC extends Compiler {
 
 	let version = await LDC.resolveVersion(versionString, token)
 	let url = `https://github.com/ldc-developers/ldc/releases/download`
+	if (versionString.startsWith('wekaldc'))
+		url = `https://github.com/weka/ldc/releases/download`
 	url += `/v${version}`
 	url += `/ldc2-${version}-${LDC.archiveSuffix(LDC.isLegacyOsx(version))}`
 
@@ -599,6 +601,15 @@ export class LDC extends Compiler {
 	- etc.
     */
     static async resolveVersion(versionString: string, token: string): Promise<string> {
+   if (versionString.startsWith('wekaldc')) {
+	   // weka-1.38.0-weka2
+		let wekamatch
+		if ((wekamatch = versionString.match(/^wekaldc-(.*)$/)) !== null)
+			return wekamatch[1]
+		else
+	   	throw new Error(`Unrecognized wekaldc version string: ${versionString}`)
+	}
+
 	if (!versionString.startsWith('ldc'))
 	    throw new Error(`ldc version string doesn't start with ldc: ${versionString}`)
 	let version: string

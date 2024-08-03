@@ -28,6 +28,8 @@ export async function run() {
 	    compiler = await d.DMD.initialize(d_compiler, gh_token)
 	else if (d_compiler.startsWith('ldc'))
 	    compiler = await d.LDC.initialize(d_compiler, gh_token)
+    else if (d_compiler.startsWith('wekaldc'))
+        compiler = await d.LDC.initialize(d_compiler, gh_token)
 	else if (d_compiler.startsWith('gdc'))
 	    compiler = await d.GDC.initialize(d_compiler, gdmd_sha)
 	else

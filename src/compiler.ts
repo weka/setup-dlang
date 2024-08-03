@@ -18,12 +18,13 @@ export interface DubDescription {
 }
 
 export async function compiler(description: string, dub_vers: string, gh_token: string): Promise<CompilerDescription> {
-    const matches = description.match(/^(\w+)-(.+)$/);
+    const matches = description.match(/^(\w+?)-(.+)$/);
     if (!matches) throw new Error("invalid compiler string: " + description);
 
     switch (matches[1]) {
         case "dmd": return await dmd(matches[2], dub_vers, gh_token);
         case "ldc": return await ldc(matches[2], dub_vers, gh_token);
+        case "wekaldc": return await wekaldc(matches[2], dub_vers, gh_token);
         default: throw new Error("unrecognized compiler: " + matches[1]);
     }
 }
@@ -260,6 +261,66 @@ async function ldc(version: string, dub_vers: string, gh_token: string): Promise
         throw new Error("unrecognized LDC version: " + version);
 
     const base_url = `https://github.com/ldc-developers/ldc/releases/download/v${version}/ldc2-${version}`;
+
+    switch (process.platform) {
+        case "win32": return {
+            name: "ldc2",
+            version: version,
+            url: `${base_url}-windows-multilib.7z`,
+            binpath: `\\ldc2-${version}-windows-multilib\\bin`,
+            libpath: [`\\ldc2-${version}-windows-multilib\\lib64`],
+            dub: await dub(dub_vers, gh_token, false)
+        };
+        case "linux":
+            var arch: string = "";
+            switch (process.arch) {
+                case "ia32": arch = "x86"; break; // supported on very old LDC releases
+                case "x64": arch = "x86_64"; break;
+                case "arm": arch = "armhf"; break; // supported on old LDC releases
+                case "arm64": arch = "aarch64"; break;
+            }
+            return {
+                name: "ldc2",
+                version: version,
+                url: `${base_url}-linux-${arch}.tar.xz`,
+                binpath: `/ldc2-${version}-linux-${arch}/bin`,
+                libpath: [`/ldc2-${version}-linux-${arch}/lib`, `/ldc2-${version}-linux-${arch}/lib64`],
+                dub: await dub(dub_vers, gh_token, false)
+            };
+        case "darwin":
+            var arch: string = "";
+            switch (process.arch) {
+                case "ia32":
+                case "x64": arch = "x86_64"; break;
+                case "arm":
+                case "arm64": arch = "aarch64"; break;
+            }
+            return cmpSemver(parseSimpleSemver(version),
+                [1, 30, 0, ["beta1"]]) >= 0 ?
+                {
+                    name: "ldc2",
+                    version: version,
+                    url: `${base_url}-osx-universal.tar.xz`,
+                    binpath: `/ldc2-${version}-osx-universal/bin`,
+                    libpath: [`/ldc2-${version}-osx-universal/lib-arm64`, `/ldc2-${version}-osx-universal/lib-x86_64`],
+                    dub: await dub(dub_vers, gh_token, false)
+                } : {
+                    name: "ldc2",
+                    version: version,
+                    url: `${base_url}-osx-${arch}.tar.xz`,
+                    binpath: `/ldc2-${version}-osx-${arch}/bin`,
+                    libpath: [`/ldc2-${version}-osx-${arch}/lib-arm64`, `/ldc2-${version}-osx-${arch}/lib`],
+                    dub: await dub(dub_vers, gh_token, false)
+                };
+        default:
+            throw new Error("unsupported platform: " + process.platform);
+    }
+}
+
+async function wekaldc(version: string, dub_vers: string, gh_token: string): Promise<CompilerDescription> {
+    // version string example: "1.30.0-weka7-epyc-cache
+
+    const base_url = `https://github.com/weka/ldc/releases/download/v${version}/ldc2-${version}`;
 
     switch (process.platform) {
         case "win32": return {
